@@ -1,5 +1,7 @@
+import json
+from pathlib import Path
 from typing import List, Dict, Any
-from processor.import_process.base import BaseNode
+from processor.import_process.base import BaseNode, setup_logging
 from processor.import_process.state import ImportGraphState
 from processor.import_process.exceptions import ValidationError
 from processor.import_process.config import get_config
@@ -56,11 +58,11 @@ class BGEEmbeddingChunksNode(BaseNode):
         '''
         拼接要嵌入的内容，把嵌入的向量注入到chunk中，返回最终的chunk
         '''
-        self.log_step('step2', f'批量处理chunk嵌入：批次{i+1} / {i+len(batch_chunks)}')
+        self.log_step('step2', f'批量处理chunk嵌入：批次{i+1}-{i+len(batch_chunks)}')
         
         # 1. 循环处理所有chunk要嵌入的内容
         embedding_contents = []
-        for _, chunk in enumerate(batch_chunks):
+        for chunk in batch_chunks:
             # 1.1 提取content
             content = chunk.get('content')
             # 1.2 提取item_name
@@ -94,5 +96,37 @@ class BGEEmbeddingChunksNode(BaseNode):
             chunk['dense_vector'] = dense_vector
             chunk['sparse_vector'] = sparse_vector
         
-        self.logger.info('开始处理')
+        self.logger.info(f'开始批量处理chunk嵌入：批次{i+1}-{i + len(batch_chunks)} / {total_length}')
         return batch_chunks
+        
+    
+if __name__ == '__main__':
+    setup_logging()
+
+    base_temp_dir = Path(
+        r"D:\atguigu\shopkeer_brain\knowledge\processor\import_process\output_temp_dir\万用表RS-12的使用\hybrid_auto")
+
+    input_path = base_temp_dir / "chunks.json"
+    output_path = base_temp_dir / "chunks_vector.json"
+
+    # 1. 读取上游状态
+    if not input_path.exists():
+        print(f" 找不到输入文件: {input_path}")
+
+    with open(input_path, "r", encoding="utf-8") as f:
+        content = json.load(f)
+
+    # 2. 构建模拟的图状态 (Graph State)
+    state = {
+            "chunks": content
+        }
+
+    # 3. 触发节点执行
+    node_bge_embedding = BGEEmbeddingChunksNode()
+    proceed_result = node_bge_embedding.process(state)
+
+    # 4. 结果落盘
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(proceed_result, f, ensure_ascii=False, indent=4)
+
+    print(f" 向量生成测试完成！结果已成功备份至:\n{output_path}")

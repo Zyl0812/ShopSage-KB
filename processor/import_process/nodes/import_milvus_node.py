@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pymilvus import DataType
 from pymilvus.milvus_client import MilvusClient
 
-from processor.import_process.base import BaseNode
+from processor.import_process.base import BaseNode, setup_logging
 from processor.import_process.state import ImportGraphState
 from processor.import_process.exceptions import ValidationError
 from processor.import_process.config import get_config
@@ -31,7 +31,7 @@ logging.basicConfig(level=logging.INFO)
 @dataclass(frozen=True)
 class ScalarFieldSpec:
     field_name: str
-    data_type: DataType
+    datatype: DataType
     max_length: Optional[int]=None
     
 # Sequence:有序可读序列
@@ -57,7 +57,7 @@ class _MilvusSchemaBuilder:
         # 2. 构建主键字段约束
         schema.add_field(
             field_name='chunk_id',
-            datatype=DataType.VARCHAR,
+            datatype=DataType.INT64,
             is_primary=True,
             auto_id=True
         )
@@ -75,11 +75,11 @@ class _MilvusSchemaBuilder:
         
         # 4. 构建标量字段约束
         for scalar_field in _SCALAR_FIELDS:
-            kwargs: Dict[str, Any] = {'field_name': scalar_field.field_name, 'datatype': scalar_field.datatype}
-            
+            kwargs: Dict[str, Any] = {'field_name': scalar_field.field_name, 'datatype': scalar_field.datatype, 'nullable': True}
+
             if scalar_field.max_length is not None:
                 kwargs['max_length'] = scalar_field.max_length
-            
+
             schema.add_field(**kwargs)
         
         logger.info('构建schema完成')
@@ -127,7 +127,7 @@ class _MilvusInsertBuilder:
         inserted_result = self._client.insert(collection_name=self._collection_name, data=chunks)
         
         inserted_count = inserted_result.get('inserted_count')
-        inserted_ids = inserted_result.get('inserted_ids')
+        inserted_ids = inserted_result.get('ids')
         
         # 2. 回填chunk_id
         self._fill_chunk_ids(chunks, inserted_ids)
@@ -180,18 +180,18 @@ class ImportMilvusNode(BaseNode):
         # 2. 遍历chunks，校验是否有混合向量
         validated_chunks = []
         for chunk in chunks:
-            if chunk.get('dense_vactor') and chunk.get('sparse_vector'):
+            if chunk.get('dense_vector') and chunk.get('sparse_vector'):
                 validated_chunks.append(chunk)
             else:
                 self.logger.error('待入库chunk的混合向量不存在')
-                
+
         # 3. 判断有效集合
         if not validated_chunks:
             # validated_chunks为空，说明所有chunk都缺少混合向量
             raise ValidationError('入库的chunk都无效', self.name)
-        
+
         # 4. 获取向量维度
-        dim = len(validated_chunks[0].get('dense_vactor'))
+        dim = len(validated_chunks[0].get('dense_vector'))
         self.logger.info(f'导入Milvus向量数据库的有效chunk数量：{len(validated_chunks)}，且chunk的向量维度为{dim}')
         
         return validated_chunks, dim, config
@@ -217,3 +217,40 @@ class ImportMilvusNode(BaseNode):
         
         # 5. 创建集合
         milvus_client.create_collection(collection_name, schema=schema, index_params=index)        
+
+
+from pathlib import Path
+import json
+
+
+def _cli_main() -> None:
+    setup_logging()
+
+    temp_dir = Path(
+        r"D:\atguigu\shopkeer_brain\knowledge\processor\import_process\output_temp_dir\万用表RS-12的使用\hybrid_auto")
+
+    input_path = temp_dir / "chunks_vector.json"
+    output_path = temp_dir / "chunks_vector_ids.json"
+
+    if not input_path.exists():
+        logger.error(f"找不到输入文件: {input_path}")
+        return
+
+    with open(input_path, "r", encoding="utf-8") as fh:
+        content = json.load(fh)
+
+    state: ImportGraphState = {
+        "chunks": content.get("chunks", [])
+    }
+
+    import_milvus = ImportMilvusNode()
+    result_state = import_milvus.process(state)
+
+    with open(output_path, "w", encoding="utf-8") as fh:
+        json.dump(result_state, fh, ensure_ascii=False, indent=4)
+
+    logger.info(f"备份临时文件{output_path}成功")
+
+
+if __name__ == "__main__":
+    _cli_main()

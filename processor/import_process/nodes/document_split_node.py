@@ -135,57 +135,44 @@ class DocumentSplitNode(BaseNode):
         
         def _flush():
             '''
-            封装section对象
-            Returns:
-                
+            封装section对象 
             '''
             body = '\n'.join(body_lines)
-            
             if body or current_title:
                 parent_title = ''
-                
-                for i in range(current_level - 1, 0, -1):
-                    # 没有上一级标题就找上两级标题，找到就break
+                for i in range(current_level-1, 0, -1):
                     if hierarchy[i]:
                         parent_title = hierarchy[i]
                         break
-                
-                if not parent_title:
-                    parent_title = current_title if current_title else file_title
-                
-                sections.append({
+            
+                return sections.append({
                     'title': current_title if current_title else file_title,
                     'body': body,
                     'file_title': file_title,
-                    'parent_title': parent_title
+                    'parent_title': parent_title if parent_title else file_title
                 })
-            
-        
+                
         for line in content_lines:
-            # 3.1 判断'#'是否在代码块中
-            if line.startswith('```') or line.strip().startswith('~~~'):
+            # 3.1 判断是否存在代码块围栏
+            if line.strip().startswith('```') or line.strip().startswith('~~~'):
                 in_fence = not in_fence
-            
+                
             match = heading_re.match(line) if not in_fence else None
             
             if match:
-                # 处理标题行
+                # 标题行
                 _flush()
-                # 当前标题的级别
-                level = len(match.group(1))
-                current_level = level
+                current_level = len(match.group(1))
                 current_title = line
-                hierarchy[level] = current_title
+                hierarchy[current_level] = current_title
                 
                 body_lines = []
-                # 命中新标题后清空
-                for i in range(level+1, 7):
+                for i in range(current_level+1, 7):
                     hierarchy[i] = ''
-                
+
             else:
-                # 除了标题的所有行，全部收集起来
+                # 除了标题的其他行
                 body_lines.append(line)
-        
         _flush()
         
         return sections
