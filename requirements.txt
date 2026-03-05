@@ -1,0 +1,10 @@
+﻿
+minio
+langchain-openai
+langgraph
+sentence-transformers
+neo4j
+pymongo
+openai-agents
+pymilvus
+grandalf

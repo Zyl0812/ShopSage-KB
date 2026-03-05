@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:python.langchain.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python -m processor.import_process.nodes.new_document_split_node)",
+      "Bash(uv run python -m processor.import_process.nodes.new_document_split_node)",
+      "Bash(uv run python -c \":*)",
+      "Bash(python test/pymilvus_test.py)",
+      "Bash(uv run test/pymilvus_test.py)",
+      "Bash(uv run:*)"
+    ]
+  }
+}
