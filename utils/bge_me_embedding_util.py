@@ -47,10 +47,10 @@ def print_sparse_matrix(sparse_vector, top_k=20):
     if hasattr(sparse_vector, 'indptr') and hasattr(sparse_vector, 'indices') and hasattr(sparse_vector, 'data'):
         # CSR格式
         print("=== 稀疏矩阵信息 ===")
-        print(f"格式: CSR")
+        print("格式: CSR")
         print(f"维度: {sparse_vector.shape}")
         print(f"非零元素数量: {sparse_vector.nnz}")
-        print(f"\n--- CSR结构 ---")
+        print("\n--- CSR结构 ---")
         print(f"indptr (行指针): {sparse_vector.indptr}")
         print(f"indices (token索引): {sparse_vector.indices}")
         print(f"data (权重值): {sparse_vector.data}")

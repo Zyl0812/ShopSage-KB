@@ -117,7 +117,7 @@ if __name__ == '__main__':
         content = json.load(f)
 
     # 2. 构建模拟的图状态 (Graph State)
-    state = {
+    state : ImportGraphState = {
             "chunks": content
         }
 

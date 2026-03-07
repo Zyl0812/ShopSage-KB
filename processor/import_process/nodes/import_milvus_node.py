@@ -1,5 +1,7 @@
 import logging
+import json
 
+from pathlib import Path
 from typing import List, Dict, Any, Sequence, Optional
 from dataclasses import dataclass
 from pymilvus import DataType
@@ -126,8 +128,10 @@ class _MilvusInsertBuilder:
         # 1. 插入数据到Milvus中
         inserted_result = self._client.insert(collection_name=self._collection_name, data=chunks)
         
-        inserted_count = inserted_result.get('inserted_count')
+        inserted_count = inserted_result.get('insert_count')
         inserted_ids = inserted_result.get('ids')
+        if not isinstance(inserted_ids, list):
+            raise ValidationError("Milvus insert返回的ids异常", "import_milvus_node")
         
         # 2. 回填chunk_id
         self._fill_chunk_ids(chunks, inserted_ids)
@@ -219,8 +223,6 @@ class ImportMilvusNode(BaseNode):
         milvus_client.create_collection(collection_name, schema=schema, index_params=index)        
 
 
-from pathlib import Path
-import json
 
 
 def _cli_main() -> None:

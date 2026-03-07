@@ -137,8 +137,11 @@ class ItemNameRecognitionNode(BaseNode):
             start_index = embedding_result['sparse'].indptr[0]
             end_index = embedding_result['sparse'].indptr[1]
             weights = embedding_result['sparse'].data[start_index:end_index].tolist()
-            tokenIds = embedding_result['sparse'].indices[start_index:end_index].tolist()
-            sparse = dict(zip(tokenIds, weights))
+            token_ids = embedding_result['sparse'].indices[start_index:end_index].tolist()
+            sparse: Dict[int, float] = {
+                int(token_id): float(weight)
+                for token_id, weight in zip(token_ids, weights)
+            }
             return dense, sparse
         except Exception as e:
             self.logger.error(f"嵌入商品名:{item_name}失败,原因是：{str(e)}")
