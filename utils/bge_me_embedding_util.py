@@ -14,7 +14,7 @@ load_dotenv()
 bge_m3_ef: Optional[BGEM3EmbeddingFunction] = None
 
 
-def get_beg_m3_embedding_model():
+def get_bge_m3_embedding_model():
     global bge_m3_ef
 
     # 1.判断
@@ -70,7 +70,7 @@ def print_sparse_matrix(sparse_vector, top_k=20):
         print("未知的稀疏向量格式")
 
 if __name__ == '__main__':
-    embedding_model = get_beg_m3_embedding_model()
+    embedding_model = get_bge_m3_embedding_model()
 
     query = "我喜欢Python语言"
 

@@ -5,7 +5,7 @@ from processor.import_process.base import BaseNode, setup_logging
 from processor.import_process.state import ImportGraphState
 from processor.import_process.exceptions import ValidationError
 from processor.import_process.config import get_config
-from utils.bge_me_embedding_util import get_beg_m3_embedding_model
+from utils.bge_me_embedding_util import get_bge_m3_embedding_model
 
 
 class BGEEmbeddingChunksNode(BaseNode):
@@ -72,7 +72,7 @@ class BGEEmbeddingChunksNode(BaseNode):
             embedding_contents.append(embedding_content)
         
         # 2. 批量嵌入
-        model = get_beg_m3_embedding_model()
+        model = get_bge_m3_embedding_model()
         embedding_result = model.encode_documents(embedding_contents)
         
         

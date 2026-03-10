@@ -11,7 +11,7 @@ from processor.import_process.prompts.item_name_prompt import ITEM_NAME_SYSTEM_P
     
 from utils.llm_util import get_llm_client
 from utils.milvus_util import get_milvus_client
-from utils.bge_me_embedding_util import get_beg_m3_embedding_model
+from utils.bge_me_embedding_util import get_bge_m3_embedding_model
 
 
 
@@ -127,7 +127,7 @@ class ItemNameRecognitionNode(BaseNode):
         self.log_step('step4', '开始进行向量嵌入')
         try:
             # 1. 获取嵌入模型
-            embedding_model = get_beg_m3_embedding_model()
+            embedding_model = get_bge_m3_embedding_model()
 
             # 2. 嵌入item_name
             embedding_result = embedding_model.encode_documents([item_name])

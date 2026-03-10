@@ -7,6 +7,11 @@ from processor.import_process.base import setup_logging
 from processor.import_process.nodes.entry_node import EntryNode
 from processor.import_process.nodes.pdf_to_md_node import PdfToMdNode
 from processor.import_process.nodes.md_img_node import MdImgNode
+from processor.import_process.nodes.document_split_node import DocumentSplitNode
+from processor.import_process.nodes.item_name_recognition_node import ItemNameRecognitionNode
+from processor.import_process.nodes.bge_embedding_chunks_node import BGEEmbeddingChunksNode
+from processor.import_process.nodes.import_milvus_node import ImportMilvusNode
+from processor.import_process.nodes.kg_graph_node import KnowledgeGraphNode
 from processor.import_process.state import ImportGraphState, create_default_state
 
 
@@ -34,7 +39,12 @@ def create_import_graph() -> CompiledStateGraph:
     nodes = {
         "entry_node": EntryNode(), 
         "pdf_to_md_node": PdfToMdNode(), 
-        "md_img_node": MdImgNode()
+        "md_img_node": MdImgNode(),
+        "document_split_node": DocumentSplitNode(),
+        "item_name_recognition_node": ItemNameRecognitionNode(),
+        "bge_embedding_chunks_node": BGEEmbeddingChunksNode(),
+        "import_milvus_node": ImportMilvusNode(),
+        "kg_graph_node": KnowledgeGraphNode(),
     }
 
     # 2.3 添加节点
@@ -46,7 +56,12 @@ def create_import_graph() -> CompiledStateGraph:
     graph_pineline.add_conditional_edges('entry_node', import_router, {'md': 'md_img_node', 'pdf': 'pdf_to_md_node', END: END})
     # 顺序边
     graph_pineline.add_edge("pdf_to_md_node", "md_img_node")
-    graph_pineline.add_edge("md_img_node", END)
+    graph_pineline.add_edge("md_img_node", "document_split_node")
+    graph_pineline.add_edge("document_split_node", "item_name_recognition_node")
+    graph_pineline.add_edge("item_name_recognition_node", "bge_embedding_chunks_node")
+    graph_pineline.add_edge("bge_embedding_chunks_node", "import_milvus_node")
+    graph_pineline.add_edge("import_milvus_node", "kg_graph_node")
+    graph_pineline.add_edge("kg_graph_node", END)
 
     # 4. 编译
     return graph_pineline.compile()

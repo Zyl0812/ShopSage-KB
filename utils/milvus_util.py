@@ -12,7 +12,7 @@ load_dotenv()
 
 client : Optional[MilvusClient] = None
 
-def get_milvus_client():
+def get_milvus_client() -> Optional[MilvusClient]:
     global client
     
     if client is not None:
@@ -22,8 +22,9 @@ def get_milvus_client():
         client = MilvusClient(
             uri=os.getenv("MILVUS_URI", "http://192.168.10.130:19530")
         )
+        return client
+
     except Exception as e:
         logger.error(f"Milvus客户端创建失败: {e}")
         client = None
-    
-    return client
+        return None
