@@ -10,6 +10,7 @@ from typing import Generic, Optional, TypeVar
 
 from processor.import_process.config import ImportConfig, get_config
 from processor.import_process.exceptions import ImportProcessError
+from utils.task_util import add_done_task, add_running_task
 
 T = TypeVar("T")  # 泛型状态类型
 
@@ -62,16 +63,18 @@ class BaseNode(ABC, Generic[T]):
         Raises:
             ImportProcessError: 节点执行失败时抛出
         """
+        task_id = state.get("task_id", '')  # pyright: ignore[reportAttributeAccessIssue]
 
-        self.logger.info(f"--- {self.name} 开始 ---")
 
         try:
+            self.logger.info(f"--- {self.name} 开始 ---")
+            if task_id:
+                add_running_task(task_id, self.name)
             result = self.process(state)
             self.logger.info(f"--- {self.name} 完成 ---")
+            if task_id:
+                add_done_task(task_id, self.name)
             return result
-        except ImportProcessError:
-            # 已经是自定义异常，直接抛出
-            raise
         except Exception as e:
             self.logger.error(f"{self.name} 执行失败: {e}")
             raise ImportProcessError(message=str(e), node_name=self.name, cause=e)

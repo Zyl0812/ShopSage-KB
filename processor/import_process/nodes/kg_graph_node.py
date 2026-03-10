@@ -68,7 +68,7 @@ CYPHER_MERGE_CHUNK = """
 CYPHER_MERGE_ENTITY_TEMPLATE = """
     MERGE (n:Entity {{name: $name, item_name: $item_name}})
     ON CREATE SET
-        n.source_chunk_id = $chunk_id
+        n.source_chunk_id = $chunk_id,
         n.description = $description
     ON MATCH SET
         n.description = CASE
@@ -333,7 +333,7 @@ class _MilvusEntityWriter:
         sparse_matrix = embedded_result.get("sparse")
 
         # 3. 校验向量是否存在
-        if not dense_vector_list or not sparse_matrix:
+        if not dense_vector_list or sparse_matrix is None:
             raise ValueError("参数校验失败，向量不存在")
 
         # 4. 获取对应快的部分内容作为上下文
@@ -361,7 +361,7 @@ class _MilvusEntityWriter:
                 "entity_name": entity,
                 "context": context,
                 "item_name": item_name,
-                "chunk_id": chunk_id,
+                "source_chunk_id": chunk_id,
                 "dense_vector": dense,
                 "sparse_vector": sparse_dict,
             }
@@ -507,7 +507,9 @@ class KnowledgeGraphNode(BaseNode):
             except Exception as e:
                 states.failed_chunks += 1
                 states.errors.append(str(e))
-                self.logger.error(f"处理失败{chunk_id} / {len(validated_chunks)}")
+                self.logger.exception(
+                    f"处理失败 {chunk_id} / {len(validated_chunks)}: {e}"
+                )
 
     def _process_single_chunk(
         self,
@@ -634,7 +636,9 @@ class KnowledgeGraphNode(BaseNode):
                 except Exception as e:
                     states.failed_chunks += 1
                     states.errors.append(str(e))
-                    self.logger.error(f"处理失败 {chunk_id} / {len(validated_chunks)}")
+                    self.logger.exception(
+                        f"处理失败 {chunk_id} / {len(validated_chunks)}: {e}"
+                    )
 
     def _parse_and_clean(self, llm_response: str) -> Dict[str, Any]:
         """
@@ -703,14 +707,14 @@ class KnowledgeGraphNode(BaseNode):
 
             # 1.2 检查是否有实体名
             if not entity_name:
-                entities.remove(entity)
+                continue
 
             # 1.3 截断实体名
             entity_name = entity_name[:MAX_ENTITY_NAME_LENGTH]
 
             # 1.4 检查实体标签是否在白名单中
             entity_label = str(entity.get("label", "")).strip()
-            if entity_label and entity_label not in ALLOWED_ENTITY_LABELS:
+            if entity_label not in ALLOWED_ENTITY_LABELS:
                 continue
 
             # 1.5 去重
@@ -726,7 +730,7 @@ class KnowledgeGraphNode(BaseNode):
             }
 
             # 1.7 判断实体的描述
-            entity_describe = str(entity.get("describe", "")).strip()
+            entity_describe = str(entity.get("description", "")).strip()
             if entity_describe:
                 clean_entity["description"] = entity_describe
             cleaned_entities.append(clean_entity)
@@ -769,7 +773,7 @@ class KnowledgeGraphNode(BaseNode):
             # 1.5 判断关系的类型是否在白名单中
             relation_type = str(relation.get("type", "")).strip()
             if relation_type and relation_type not in ALLOWED_RELATION_TYPES:
-                relation_type = ALLOWED_RELATION_TYPES
+                relation_type = DEFAULT_RELATION_TYPES
             # 1.6 构建返回数据结构
             clean_relation = {
                 "head": head_entity_name,
@@ -780,3 +784,38 @@ class KnowledgeGraphNode(BaseNode):
 
         # 2. 返回结果
         return cleaned_relations
+
+def test_kg_extraction():
+    """测试：模拟单个切片，跑通 LLM → 解析 → 清洗全流程。"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
+    mock_state = ImportGraphState({
+        "item_name": "测试万用表",
+        "chunks": [
+            {
+                "content": """# 电池安装
+                    警告: 为防触电, 打开电池后盖前后，请勿操作仪表并把表笔与电源断开。
+                    1. 把表笔与仪表断开。
+                    2. 用螺丝刀拧开电池后盖上的螺母。
+                    3. 正确安装电池，正负极应一致。
+                    4. 盖上电池后盖并拧紧螺丝钉。
+                    警告: 为防触电,在电池后盖安装和固定之前，请勿操作仪表。
+                    注意: 若仪表出现工作不正常，请检测保险丝和电池是否完好以及是否放在正确的位置。""",
+                "chunk_id": "18438591111",
+                "item_name": "测试万用表",
+            }
+        ],
+    })
+
+    knowledge_graph_node = KnowledgeGraphNode()
+
+    knowledge_graph_node.process(mock_state)
+
+
+if __name__ == "__main__":
+    test_kg_extraction()
+
+

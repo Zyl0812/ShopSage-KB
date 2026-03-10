@@ -123,18 +123,16 @@ class _MilvusInsertBuilder:
         self._client = client
         self._collection_name = collection_name
     
-    def insert(self, chunks:List[Dict[str, Any]]):
+    def insert(self, chunks:List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         logger.info(f'开始插入{len(chunks)}条数据到Milvus')
         # 1. 插入数据到Milvus中
         inserted_result = self._client.insert(collection_name=self._collection_name, data=chunks)
         
         inserted_count = inserted_result.get('insert_count')
         inserted_ids = inserted_result.get('ids')
-        if not isinstance(inserted_ids, list):
-            raise ValidationError("Milvus insert返回的ids异常", "import_milvus_node")
         
         # 2. 回填chunk_id
-        self._fill_chunk_ids(chunks, inserted_ids)
+        self._fill_chunk_ids(chunks, inserted_ids)  # pyright: ignore[reportArgumentType]
         
         logger.info(f'完成插入{inserted_count}条数据')
         return chunks

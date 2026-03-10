@@ -66,6 +66,7 @@ def create_import_graph() -> CompiledStateGraph:
     # 4. 编译
     return graph_pineline.compile()
 
+kb_import__graph_app = create_import_graph()
 
 if __name__ == "__main__":
     setup_logging()
@@ -81,7 +82,7 @@ if __name__ == "__main__":
     
     # 3. 调用stream（用流式获取每一个节点的处理情况：event事件[节点名字 节点处理后的状态]）
     final_state = None
-    for event in compiled_graph.stream(init_state):
+    for event in kb_import__graph_app.stream(init_state):
         for node_name, state in event.items():
             print(f"运行节点: {node_name}, State: {state}")
             final_state = state
