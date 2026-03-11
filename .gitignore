@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Temporary directories
+processor/import_process/import_temp_dir/
+processor/import_process/output_temp_dir/

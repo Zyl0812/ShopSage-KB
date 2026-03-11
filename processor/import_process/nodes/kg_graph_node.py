@@ -82,7 +82,7 @@ CYPHER_MERGE_ENTITY_TEMPLATE = """
 CYPHER_LINK_ENTITY_TO_CHUNK = """
     MATCH (n:Entity {name: $name, item_name: $item_name})
     MATCH (c:Chunk {id: $chunk_id, item_name: $item_name})
-    MERGE (n)-[:MENTIONED_ID]->(c)
+    MERGE (n)-[:MENTIONED_IN]->(c)
 """
 
 # Entity与Entity的关系
@@ -565,7 +565,6 @@ class KnowledgeGraphNode(BaseNode):
         MAX_COUNT = 3
         last_error = None
         # 2. 循环调试
-        # TODO：将失败的异常原因到模型
         for i in range(1, MAX_COUNT + 1):
             try:
                 # 2.1 调用模型
@@ -586,12 +585,12 @@ class KnowledgeGraphNode(BaseNode):
                 if i < MAX_COUNT:
                     # 睡一会：指数退避法
                     delay = 0.5 * (2 ** (i - 1))
-                    self.logger.warning(f"开始第{i}次重试，{delay:1.f}秒后重试")
+                    self.logger.warning(f"开始第{i}次重试，{delay:.1f}秒后重试")
                     time.sleep(delay)
 
-            self.logger.error(
-                f"已经进行了{MAX_COUNT}次重试，最后一次失败: {str(last_error)}"
-            )
+                self.logger.error(
+                    f"已经进行了{MAX_COUNT}次重试，最后一次失败: {str(last_error)}"
+                )
         # 3. 最终兜底
         return ""
 
