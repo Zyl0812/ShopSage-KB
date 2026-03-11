@@ -63,7 +63,7 @@ def create_default_state(**overrides) -> QueryGraphState:
 
     """
     state = copy.deepcopy(DEFAULT_STATE)
-    state.update(overrides)
+    state.update(overrides)  # pyright: ignore[reportCallIssue, reportArgumentType]
     return state
 
 

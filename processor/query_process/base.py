@@ -4,16 +4,16 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import TypeVar, Optional
+from typing import TypeVar, Optional, Generic
 import logging
 
-from knowledge.processor.query_process.config import QueryConfig, get_config
-from knowledge.processor.query_process.exceptions import QueryProcessError
+from processor.query_process.config import QueryConfig, get_config
+from processor.query_process.exceptions import QueryProcessError
 
 T = TypeVar("T")  # 泛型状态类型
 
 
-class BaseNode(ABC):
+class BaseNode(ABC, Generic[T]):
     """查询流程节点基类。
 
     所有节点类都应继承此基类，实现 process 方法。

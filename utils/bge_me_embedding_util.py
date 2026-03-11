@@ -69,6 +69,52 @@ def print_sparse_matrix(sparse_vector, top_k=20):
     else:
         print("未知的稀疏向量格式")
 
+
+def generate_hybrid_embeddings(embedding_model: BGEM3EmbeddingFunction, embedding_documents):
+    '''
+    为文本生成向量嵌入
+    Args:
+        embedding_model: 向量嵌入模型
+        embedding_documents: 待嵌入的文本列表
+    Returns:
+        embeddings: 嵌入结果列表，每个元素为一个字典，包含dense和sparse向量
+    '''
+    try:
+        # 1. 生成嵌入
+        embedding_result = embedding_model.encode_documents(embedding_documents)
+        
+        processed_sparse_result = []
+        # 2. 遍历每一个文档，结构CSR矩阵并获取稀疏向量
+        for idx in range(len(embedding_documents)):
+            
+            csr_array = embedding_result['sparse']
+            
+            # 2.1 获取行索引
+            ind_ptr = csr_array.indptr
+            
+            # 2.2 获取行索引的起始值
+            start_ind_ptr = ind_ptr[idx]
+            end_ind_ptr = ind_ptr[idx + 1]
+            
+            # 2.3 获取token_id
+            token_ids = csr_array.indices[start_ind_ptr:end_ind_ptr]
+            
+            # 2.4 获取权重
+            weights = csr_array.data[start_ind_ptr:end_ind_ptr]
+            
+            # 2.5 构造稀疏向量
+            sparse_vector = dict(zip(token_ids, weights))
+            processed_sparse_result.append(sparse_vector)
+        
+        return {
+            'dense': [den.tolist() for den in embedding_result['dense']],
+            'sparse': processed_sparse_result
+        }
+    except Exception:
+        return None
+    
+    
+
 if __name__ == '__main__':
     embedding_model = get_bge_m3_embedding_model()
 

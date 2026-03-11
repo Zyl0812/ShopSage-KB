@@ -6,7 +6,7 @@
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 from dotenv import load_dotenv
-from knowledge.processor.query_process.state import QueryGraphState, create_default_state
+from processor.query_process.state import QueryGraphState, create_default_state
 
 # 加载环境变量
 load_dotenv()
