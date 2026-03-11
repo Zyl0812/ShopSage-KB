@@ -1,10 +1,9 @@
 import json
-from json.decoder import JSONDecodeError
-from operator import index
 import re
 import logging
 
 from typing import Any, Dict, List, Tuple
+from json.decoder import JSONDecodeError
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from utils.llm_util import get_llm_client
@@ -38,7 +37,7 @@ class ItemNameAligner():
         if len(confirmed) > 1:
             confirmed = self._item_name_score_filte(confirmed, search_result)
         
-        return [], []
+        return confirmed, options
         
     def _match_vector(self, item_names: List[str]) -> List[Dict[str, Any]]:
         '''
@@ -65,14 +64,17 @@ class ItemNameAligner():
         
         # 2. 对item_name进行嵌入，获取稠密稀疏向量
         hybrid_embeddings = generate_hybrid_embeddings(embedding_model, item_names)
-        
+        if hybrid_embeddings is None:
+            logger.error("生成嵌入向量失败")
+            return search_result
+
         # 3. 遍历LLM提取的所有商品名
         for idx, item_name in enumerate(item_names):
             # 混合向量检索            
             # 3.1 创建混合检索的请求
             hybrid_search_requests = create_hybrid_search_requests(
-                dense_vector=hybrid_embeddings['dense'][index],
-                sparse_vector=hybrid_embeddings['sparse'][index],
+                dense_vector=hybrid_embeddings['dense'][idx],
+                sparse_vector=hybrid_embeddings['sparse'][idx],
             )
             # 3.2 执行请求
             hybrid_search_result = execute_hybrid_search_query(milvus_client, collection_name = 'kb_item_names_v2', search_requests=hybrid_search_requests, ranker_weights=(0.5, 0.5), norm_score=True, output_fields=['item_name'])
@@ -88,8 +90,9 @@ class ItemNameAligner():
                     for h in (hybrid_search_result[0] if hybrid_search_result else [])
                 ]
             }
-        
-        
+            
+            # 3.4 将构建好的查询结果放入到最终搜索结果中
+            search_result.append(hybrid_search_requests)
         return search_result
     
     
@@ -150,6 +153,7 @@ class ItemNameAligner():
     def _item_name_score_filte(self, confirmed: List[str], search_results: List[Dict[str, Any]]) -> List[str]:
         '''
         将误判的item_name从confirmed中剔除，留下真实的item_name
+        策略：分数与最高分差值超过阈值则视为误判的item_name
         '''
         # 1. 定义字典容器（存储confirmed中item_name在向量数据库中的分数值）
         item_name_score = {}
@@ -165,11 +169,14 @@ class ItemNameAligner():
         
         # 2. 对item_name_score进行排序
         sorted_item_name_score = sorted(item_name_score.items(), key=lambda x: x[1], reverse=True)
-        
+
+        if not sorted_item_name_score:
+            return confirmed
+
         # 3. 取出分数值最大的（问题询问的比较明确）
         max_score = sorted_item_name_score[0][1]
         result = [name for name, score in sorted_item_name_score if max_score - score <= 0.15]
-        
+
         return result
     
 class ItemNameExtractor:
@@ -289,14 +296,10 @@ class ItemNameConfirmNode(BaseNode):
         else:
             state['answer'] = "抱歉，我无法识别您询问的具体产品名称，请提供更准确的产品名称或型号。"
             
+            
 if __name__ == "__main__":
 
-    test_state: QueryGraphState = {
-        # "original_query": "你们店里那款苏伯尔RS-12数字万用表怎么测电压？"
-        # "original_query": "你们店里那款RS-12 数字万用表怎么测试电阻？"
-        # "original_query": "华为擎云W515操作环境支持哪些？以及华为擎云L420 用户手册 中包含操作环境嘛？"
-        "original_query": "RS-12 数字万用表怎么测试电阻？以及华为擎云L420 用户手册 中包含操作环境嘛？"
-    }
+    test_state =  QueryGraphState({"original_query": "你们店里那款RS-12 数字万用表怎么测试电阻？"})  # pyright: ignore[reportArgumentType]
 
     print(f"输入: {json.dumps(test_state, ensure_ascii=False, indent=2)}\n")
 
