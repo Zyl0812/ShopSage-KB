@@ -21,7 +21,7 @@ def get_milvus_client() -> Optional[MilvusClient]:
     
     try:
         client = MilvusClient(
-            uri=os.getenv("MILVUS_URI", "http://192.168.10.130:19530")
+            uri=os.getenv("MILVUS_URL", "http://192.168.10.130:19530")
         )
         return client
 
