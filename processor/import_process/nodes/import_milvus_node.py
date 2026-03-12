@@ -199,7 +199,7 @@ class ImportMilvusNode(BaseNode):
         return validated_chunks, dim, config
         
     
-    def _ensure_has_collection(self, milvus_client: MilvusClient, collection_name: str, dim: int, delete_flag: bool = True):
+    def _ensure_has_collection(self, milvus_client: MilvusClient, collection_name: str, dim: int, delete_flag: bool = False):
         self.log_step('step2', f'准备集合{collection_name}创建')
         # 1. 是否要删除集合
         if delete_flag and milvus_client.has_collection(collection_name):

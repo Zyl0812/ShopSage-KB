@@ -77,7 +77,7 @@ class ItemNameAligner():
                 sparse_vector=hybrid_embeddings['sparse'][idx],
             )
             # 3.2 执行请求
-            hybrid_search_result = execute_hybrid_search_query(milvus_client, collection_name = 'kb_item_names_v2', search_requests=hybrid_search_requests, ranker_weights=(0.5, 0.5), norm_score=True, output_fields=['item_name'])
+            hybrid_search_result = execute_hybrid_search_query(milvus_client, collection_name = 'kb_item_names', search_requests=hybrid_search_requests, ranker_weights=(0.5, 0.5), norm_score=True, output_fields=['item_name'])
                 
             # 3.3 对结果进行解析
             hybrid_search_requests = {

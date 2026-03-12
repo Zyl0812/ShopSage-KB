@@ -75,7 +75,7 @@ if __name__ == "__main__":
     
     # 2. 构建state
     state = {
-        "import_file_path": r"D:\atguigu\shopkeer_brain\knowledge\processor\import_process\import_temp_dir\万用表RS-12的使用.pdf",
+        "import_file_path": r"D:\尚硅谷\19_掌柜智库项目\资料包\pdf文档\doc\华为擎云B730 用户指南-(PUCZ,Windows11_03,zh-cn).pdf",
         "file_dir": r"D:\atguigu\shopkeer_brain\knowledge\processor\import_process\output_temp_dir",
     }
     init_state = create_default_state(**state)
