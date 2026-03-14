@@ -14,9 +14,18 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+class _EntityExtractor:
+    '''
+    实体抽取器
+    职责：利用LLM从查询问题中提取实体
+    '''
+
+
+
+
 
 class KnowledgeGraphSearchNode(BaseNode):
     name = 'knowledge_graph_search_node'
 
     def process(self, state: QueryGraphState) -> QueryGraphState:
-        
+        pass

@@ -7,7 +7,7 @@ from processor.import_process.base import BaseNode
 from processor.import_process.state import ImportGraphState
 from processor.import_process.exceptions import ValidationError, EmbeddingError
 from processor.import_process.config import get_config
-from processor.import_process.prompts.item_name_prompt import ITEM_NAME_SYSTEM_PROMPT, ITEM_NAME_USER_PROMPT_TEMPLATE
+from prompts.import_prompts import ITEM_NAME_SYSTEM_PROMPT, ITEM_NAME_USER_PROMPT_TEMPLATE
     
 from utils.llm_util import get_llm_client
 from utils.milvus_util import get_milvus_client

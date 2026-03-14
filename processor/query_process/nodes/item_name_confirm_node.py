@@ -12,7 +12,7 @@ from utils.bge_me_embedding_util import get_bge_m3_embedding_model, generate_hyb
 from processor.query_process.state import QueryGraphState
 from processor.query_process.base import BaseNode
 from processor.query_process.config import get_config
-from processor.query_process.prompts.kg_query_prompt import ITEM_NAME_EXTRACT_TEMPLATE
+from prompts.query_prompts import ITEM_NAME_EXTRACT_TEMPLATE
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
