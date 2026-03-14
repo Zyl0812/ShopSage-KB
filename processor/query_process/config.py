@@ -6,7 +6,8 @@
 from dataclasses import dataclass, field
 from typing import Optional
 import os
-
+from dotenv import load_dotenv
+load_dotenv()
 
 @dataclass
 class QueryConfig:
@@ -136,6 +137,12 @@ class QueryConfig:
     # ==================== MCP 配置 ====================
     mcp_dashscope_base_url: str = field(
         default_factory=lambda: os.getenv("MCP_DASHSCOPE_BASE_URL", "")
+    )
+    tavily_api_key: str = field(
+        default_factory=lambda: os.getenv("TAVILY_API_KEY", "")
+    )
+    tavily_mcp_url: str = field(
+        default_factory=lambda: os.getenv("TAVILY_MCP_URL", "")
     )
 
     @classmethod

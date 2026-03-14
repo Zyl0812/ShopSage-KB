@@ -9,7 +9,10 @@
       "Bash(uv run python -c \":*)",
       "Bash(python test/pymilvus_test.py)",
       "Bash(uv run test/pymilvus_test.py)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(python -m test.BGE_M3_test)",
+      "Bash(find /d/atguigu/shopkeer_brain/knowledge/processor -name *config* -o -name *exception*)",
+      "Bash(python -m test.hybrid_search_test)"
     ]
   }
 }

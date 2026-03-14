@@ -43,6 +43,34 @@ class QueryProcessError(Exception):
             parts.append(f"(原因: {self.cause})")
         return " ".join(parts)
 
+class StateFieldError(QueryProcessError):
+    """状态字段错误。
+
+    当从 state 中读取必需字段时，如果字段缺失、为空，
+    或类型不符合预期，则抛出该异常。
+
+    Attributes:
+        field_name: 缺失或无效的字段名称。
+        expected_type: 期望的字段类型，可选。
+    """
+
+    def __init__(
+        self,
+        node_name: str = "",
+        field_name: str = "",
+        expected_type: type | None = None,
+        message: str = "",
+        cause: Exception | None = None,
+    ) -> None:
+        self.field_name = field_name
+        self.expected_type = expected_type
+
+        if not message:
+            message = f"状态字段 '{field_name}' 缺失或无效"
+            if expected_type is not None:
+                message += f"，期望类型: {expected_type.__name__}"
+
+        super().__init__(message, node_name=node_name, cause=cause)
 
 class ConfigurationError(QueryProcessError):
     """配置错误。
