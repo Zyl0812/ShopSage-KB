@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from pymilvus import MilvusClient
@@ -19,6 +19,7 @@ from utils.llm_util import get_llm_client
 from utils.milvus_util import (
     create_hybrid_search_requests,
     execute_hybrid_search_query,
+    fetch_chunks_by_chunk_ids,
     get_milvus_client,
 )
 from utils.neo4j_util import get_neo4j_driver
@@ -192,6 +193,21 @@ def _build_item_entity_pairs(
             )
 
     return pairs
+
+
+def _one_hop_triples_to_texts(triples: List[OneHopRelation]) -> List[str]:
+    if not triples:
+        return []
+    docs: List[str] = []
+    for tr in triples:
+        it = (tr.get("item_name") or "").strip()
+        h = (tr.get("head") or "").strip()
+        r = (tr.get("rel") or "").strip()
+        t = (tr.get("tail") or "").strip()
+        if not (h and r and t):
+            continue
+        docs.append(f"[{it}] {h} -({r})-> {t}" if it else f"{h} -({r})-> {t}")
+    return docs
 
 
 class _EntityExtractor:
@@ -517,7 +533,7 @@ class _Neo4jGraphReader:
 
             except Exception as e:
                 self._logger.error(f"获取种子节点失败，原因：{str(e)}")
-                return []
+                continue
 
         self._logger.info(f"共获取到{len(final_seeds_result)}个种子节点")
         return final_seeds_result
@@ -534,7 +550,7 @@ class _Neo4jGraphReader:
         if exact_rows:
             return _clean_seed_rows(exact_rows)
 
-        # 2. 模糊查询
+        # 2. 降级，模糊查询
         fuzzy_rows = session.execute_read(
             lambda tx: tx.run(
                 _CYPHER_FUZZY_SEEDS,
@@ -635,7 +651,7 @@ class _Neo4jGraphReader:
             rel_type = rel.get("rel")
             tail = rel.get("tail")
             # 判断是否存在关系链
-            if not (head and rel and tail):
+            if not (head and rel_type and tail):
                 continue
 
             one_hop_relations_result.append(
@@ -679,17 +695,17 @@ class _Neo4jGraphReader:
                 # 3.2 设置种子节点权重
                 weight_map[key] = _SEED_NODE_WEIGHT
 
-        # 4. 遍历一跳三元组
+        # 4. 遍历一跳四元组
         for rel in one_hop_relations:
             # 4.1 获取
             head = rel.get("head")
             tail = rel.get("tail")
             item_name = rel.get("item_name")
-            # 4.2 设置邻居节点权重
-            if item_name and head and (item_name, head) not in weight_map:
+            # 4.2 排除种子节点，设置邻居节点权重
+            if head and (item_name, head) not in weight_map:
                 weight_map[(item_name, head)] = _NBR_NODE_WEIGHT
 
-            if item_name and tail and (item_name, tail) not in weight_map:
+            if tail and (item_name, tail) not in weight_map:
                 weight_map[(item_name, tail)] = _NBR_NODE_WEIGHT
 
         return [
@@ -742,6 +758,95 @@ class _Neo4jGraphReader:
         return hits
 
 
+class _ChunkBackFiller:
+    """
+    1. 根据Neo4j返回的chunk信息获取chunk_ids(entity('chunk_id'))
+    2. 根据chunk_ids查询Milvus获取到chunks对象 (批量操作，返回的chunk没有顺序)
+    3. 构建映射表将Milvus返回的chunk_id映射到chunk对象
+    4. 遍历原有分数降序的chunk_id列表，从映射表中获取对应的chunk
+    4. 更新到state
+    """
+
+    def __init__(self, collection_name: str):
+        self._collection_name = collection_name
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def back_fill(
+        self, chunk_nodes_sorted: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        1. 获取所有chunk_id
+        2. 根据批量的chunk_id查询Milvus
+        3. 构建{chunk_id : chunk}对象映射表
+        4. 遍历原有的chunk_id列表，从映射表中获取对应的chunk对象
+
+        Args:
+            chunk_nodes_sorted: 排好序的chunk节点
+        Returns:
+            List[Dict[str, Any]]:
+        """
+        # 1. 判断
+        if not chunk_nodes_sorted:
+            return []
+
+        # 2. 获取chunk_ids
+        chunk_ids: List[Union[str, int]] = self._collect_chunk_ids(chunk_nodes_sorted)
+
+        # 3. 根据chunk_ids查询Milvus
+        try:
+            chunks: List[Dict[str, Any]] = fetch_chunks_by_chunk_ids(
+                collection_name=self._collection_name,
+                chunk_ids=chunk_ids,
+                output_fields=[
+                    "chunk_id",
+                    "content",
+                    "title",
+                    "file_title",
+                    "item_name",
+                ],
+                batch_size=30,
+            )
+            if not chunks:
+                return []
+        except Exception as e:
+            self.logger.error(f"根据chunk_id批量查询chunk对象失败：{str(e)}")
+            return []
+
+        # 4. 构建映射表{chunk_id: chunk}TODO
+        chunk_id_map = {
+            str(chunk.get("chunk_id")): chunk
+            for chunk in chunks
+            if chunk.get("chunk_id") is not None
+        }
+
+        # 5. 根据真实顺序的chunk_id查询对应的chunk
+        return [c for c in (chunk_id_map.get(str(chunk_id)) for chunk_id in chunk_ids) if c is not None]
+
+    def _collect_chunk_ids(
+        self, chunk_nodes_sorted: List[Dict[str, Any]]
+    ) -> List[Union[str, int]]:
+        # 1. 遍历chunk_ids
+        chunk_ids = []
+        for chunk_node in chunk_nodes_sorted:
+            if not chunk_node:
+                continue
+            # 2. 获取entity
+            entity = chunk_node.get("entity", "")
+            if not entity:
+                continue
+            # 3. 获取chunk_id
+            chunk_id = entity.get("chunk_id")
+            if not chunk_id:
+                continue
+            # 4. chunk_id转换
+            try:
+                chunk_ids.append(int(str(chunk_id)))
+            except (ValueError, TypeError):
+                chunk_ids.append(str(chunk_id))
+
+        return chunk_ids
+
+
 class KnowledgeGraphSearchNode(BaseNode):
     """
     知识图谱查询主编排器。
@@ -763,9 +868,14 @@ class KnowledgeGraphSearchNode(BaseNode):
         validated_query, validated_item_names = self._validate_input(state)
 
         # 2. 执行流水线
-        result = self._run_pipeline(validated_query, validated_item_names)
+        kg_result: Dict[str, Any] = self._run_pipeline(
+            validated_query, validated_item_names
+        )
 
-        return result
+        # 3. 更新状态
+        state["kg_chunks"] = kg_result.get("kg_chunks", [])
+        state["kg_triples"] = kg_result.get("kg_triples", [])
+        return state
 
     def _validate_input(self, state: QueryGraphState) -> Tuple[str, List[str]]:
         """"""
@@ -784,13 +894,21 @@ class KnowledgeGraphSearchNode(BaseNode):
                 node_name=self.name, field_name="item_names", expected_type=list
             )
 
-        # 3. 从rewritten_query中剔除商品名
-        for item_name in item_names:
-            rewritten_query = rewritten_query.replace(item_name, "")
+        # 3. 从rewritten_query中剔除商品名TODO
+        user_query = rewritten_query
+        for name in item_names:
+            if not name:
+                continue
+            pattern = r"\s*".join(re.escape(ch) for ch in name.replace(" ", ""))
+            user_query = re.sub(pattern, "", user_query, flags=re.IGNORECASE)
 
-        return rewritten_query, item_names
+        user_query = " ".join(user_query.split()).strip()
 
-    def _run_pipeline(self, validated_query: str, validated_item_names: List[str]):
+        return user_query, item_names
+
+    def _run_pipeline(
+        self, validated_query: str, validated_item_names: List[str]
+    ) -> Dict[str, Any]:
         """"""
         # 1. 初始化组件
         entity_extractor = _EntityExtractor()
@@ -803,13 +921,14 @@ class KnowledgeGraphSearchNode(BaseNode):
             kg_max_total_triples=config.kg_max_total_triples,
             kg_max_total_chunks=config.kg_max_total_chunks,
         )
+        chunk_back_filler = _ChunkBackFiller(collection_name=config.chunks_collection)
 
         # 2. 执行实体抽取
         entities_name = entity_extractor._extract(validated_query)
         entities_aligned_name: Dict[str, Any] = entity_aligner._align(
             entities_name, validated_item_names
         )
-        # 2.1 获取所有对齐后的实体名 TODO:修改key名
+        # 2.1 获取所有对齐后的实体名
         aligned_entities_name = entities_aligned_name.get("entities_aligned_name")
         # 2.2 获取所有对齐后的实体信息
         entities_aligned_elements = entities_aligned_name.get(
@@ -842,7 +961,22 @@ class KnowledgeGraphSearchNode(BaseNode):
             neo4j_graph_reader.find_nodes_chunk_id(weighted_nodes)
         )
 
-        return chunk_nodes_sorted
+        # 5. Milvus操作：回填chunk_id
+        kg_chunks = chunk_back_filler.back_fill(chunk_nodes_sorted)
+
+        # 6. 将一跳关系转换成模型容易理解的真实图谱结构
+        triples_docs = _one_hop_triples_to_texts(one_hop_relations)
+
+        # 7. 汇总知识图谱节点的所以信息
+        return {
+            "kg_chunks": kg_chunks,  # 回填后的切片文本 → 送入 RRF
+            "kg_triples": triples_docs,  # 关系文本描述 → 送入答案生成 prompt
+            "kg_seed_nodes": seed_nodes,
+            "kg_triples_raw": one_hop_relations,
+            "kg_entities": entities_name,
+            "kg_aligned_entities": aligned_entities_name,
+            "kg_alignments": entities_aligned_elements,
+        }
 
 
 if __name__ == "__main__":

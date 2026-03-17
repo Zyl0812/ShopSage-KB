@@ -1,7 +1,7 @@
 import os
 import logging
 
-from typing import Optional
+from typing import List, Optional
 from pymilvus import MilvusClient, WeightedRanker, AnnSearchRequest
 from dotenv import load_dotenv
 
@@ -123,3 +123,39 @@ def execute_hybrid_search_query(milvus_client: MilvusClient,
     except Exception as e:
         logger.error(f"执行Milvus混合搜索时发生错误: {e}")
         return []
+        
+        
+        
+def fetch_chunks_by_chunk_ids(
+    collection_name: str,
+    chunk_ids: List[str],
+    *,
+    output_fields=None,
+    batch_size=100
+):
+    '''
+    通过chunk_id批量查询切片字段，返回Milvus entity(字段字典)
+    '''
+    client = get_milvus_client()
+    if not client:
+        return []
+    if output_fields is None:
+        # 默认返回字段与collection schema保持一致
+        output_fields = ["chunk_id", "content", "title", "file_title", "item_name"]
+    
+    results = []
+    # 分批，避免一次性过大
+    for i in range(0, len(chunk_ids), batch_size):
+        batch = chunk_ids[i:i+batch_size]
+        try:
+            got = client.get(
+                collection_name=collection_name,
+                ids=batch,
+                output_fields=output_fields,
+            )
+            if got:
+                results.extend(got)
+            continue
+        except Exception as e:
+            logger.error(f"获取chunk_id {batch} 时发生错误: {e}")
+    return results
