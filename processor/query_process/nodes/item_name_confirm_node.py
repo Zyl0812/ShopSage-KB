@@ -8,7 +8,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from utils.llm_util import get_llm_client
 from utils.milvus_util import get_milvus_client, create_hybrid_search_requests, execute_hybrid_search_query
-from utils.bge_me_embedding_util import get_bge_m3_embedding_model, generate_hybrid_embeddings
+from utils.bge_m3_embedding_util import get_bge_m3_embedding_model, generate_hybrid_embeddings
 from processor.query_process.state import QueryGraphState
 from processor.query_process.base import BaseNode
 from processor.query_process.config import get_config
@@ -258,7 +258,8 @@ class ItemNameExtractor:
 class ItemNameConfirmNode(BaseNode):
     name = 'item_name_confirm_node'
     
-    def __init__(self):
+    def __init__(self): 
+        super().__init__()
         self._item_name_extractor = ItemNameExtractor()
         self._item_name_aligner = ItemNameAligner()
     

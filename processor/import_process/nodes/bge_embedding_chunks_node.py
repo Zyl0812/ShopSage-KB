@@ -5,7 +5,7 @@ from processor.import_process.base import BaseNode, setup_logging
 from processor.import_process.state import ImportGraphState
 from processor.import_process.exceptions import ValidationError
 from processor.import_process.config import get_config
-from utils.bge_me_embedding_util import get_bge_m3_embedding_model
+from utils.bge_m3_embedding_util import get_bge_m3_embedding_model
 
 
 class BGEEmbeddingChunksNode(BaseNode):

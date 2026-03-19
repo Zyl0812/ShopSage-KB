@@ -4,8 +4,7 @@ import logging
 
 from typing import List, Tuple
 
-from mcp.client.streamable_http import streamable_http_client
-from mcp import ClientSession
+from fastmcp import Client
 
 from processor.query_process.exceptions import StateFieldError
 from processor.query_process.state import QueryGraphState
@@ -52,22 +51,9 @@ class MCPSearchNode(BaseNode):
         return rewrritten_query, item_names
 
 
-    def _get_tavily_mcp_url(self) -> str:
-        """拼接 Tavily MCP 的 Streamable HTTP 地址"""
-        if self.config.tavily_mcp_url:
-            return self.config.tavily_mcp_url
-
-        api_key = self.config.tavily_api_key
-        if not api_key:
-            raise ValueError('未配置 TAVILY_API_KEY 或 TAVILY_MCP_URL')
-
-        return f'https://mcp.tavily.com/mcp/?tavilyApiKey={api_key}'
-
-
     def _tavily_mcp_search(self, query: str) -> list:
         """通过 Tavily MCP 进行网络搜索"""
         try:
-            # 兼容已有事件循环的场景（如 Jupyter / 异步框架）
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
@@ -85,26 +71,23 @@ class MCPSearchNode(BaseNode):
 
     async def _async_tavily_search(self, query: str) -> list:
         """异步调用 Tavily MCP Streamable HTTP 服务"""
-        mcp_url = self._get_tavily_mcp_url()
+        mcp_url = f'https://mcp.tavily.com/mcp/?tavilyApiKey={self.config.tavily_api_key}'
 
-        async with streamable_http_client(url=mcp_url) as (read_stream, write_stream, _):
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
+        async with Client(mcp_url) as client:
+            result = await client.call_tool(
+                'tavily_search',
+                arguments={
+                    'query': query,
+                    'search_depth': 'advanced',
+                    'max_results': 2
+                }
+            )
 
-                result = await session.call_tool(
-                    'tavily_search',
-                    arguments={
-                        'query': query,
-                        'search_depth': 'advanced',
-                        'max_results': 2
-                    }
-                )
-
-                return self._parse_mcp_result(result)
+            return self._parse_mcp_result(result)
 
 
     def _parse_mcp_result(self, result) -> list:
-        """解析 MCP 工具调用返回的结果 TODO（JSON反序列化）"""
+        """解析 MCP 工具调用返回的结果"""
         docs = []
         if not result or not result.content:
             return docs
@@ -127,30 +110,28 @@ class MCPSearchNode(BaseNode):
                         'content': item.get('content', ''),
                         'url': item.get('url', ''),
                         'title': item.get('title', ''),
-                        'score': item.get('score', 0.0)
                     })
             except json.JSONDecodeError:
                 docs.append({
                     'content': content_block.text,
                     'url': '',
                     'title': '',
-                    'score': 0.0
                 })
 
         return docs
 
 
-# if __name__ == '__main__':
-#     from dotenv import load_dotenv
-#     load_dotenv()
+if __name__ == '__main__':
+    from dotenv import load_dotenv
+    load_dotenv()
 
-#     state = QueryGraphState(
-#         {
-#             'rewritten_query': '华为擎云B730如何使用',
-#             'item_names': ['华为擎云B730 台式计算机']
-#         }
-#     )
-    
-#     node = MCPSearchNode()
-#     result = node.process(state).get('web_search_docs', [])
-#     print(result)
+    state = QueryGraphState(
+        {
+            'rewritten_query': '华为擎云B730如何使用',
+            'item_names': ['华为擎云B730 台式计算机']
+        }
+    )
+
+    node = MCPSearchNode()
+    result = node.process(state).get('web_search_docs', [])
+    print(result)

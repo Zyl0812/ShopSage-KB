@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from processor.query_process.exceptions import StateFieldError
 from utils.milvus_util import get_milvus_client, create_hybrid_search_requests, execute_hybrid_search_query
-from utils.bge_me_embedding_util import get_bge_m3_embedding_model, generate_hybrid_embeddings
+from utils.bge_m3_embedding_util import get_bge_m3_embedding_model, generate_hybrid_embeddings
 from utils.llm_util import get_llm_client
 from processor.query_process.state import QueryGraphState
 from processor.query_process.base import BaseNode
@@ -35,7 +35,7 @@ class HyDeSearchNode(BaseNode):
         
         # 4. 假设性文档嵌入（注入问题+假设性文档）
         embedding_document = f'{validated_query}\n{hy_document}'
-        embedding_result = generate_hybrid_embeddings(embedding_model, embedding_document)
+        embedding_result = generate_hybrid_embeddings(embedding_model, [embedding_document])
         
         if not embedding_result:
             return state

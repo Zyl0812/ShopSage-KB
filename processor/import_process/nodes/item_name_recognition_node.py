@@ -11,7 +11,7 @@ from prompts.import_prompts import ITEM_NAME_SYSTEM_PROMPT, ITEM_NAME_USER_PROMP
     
 from utils.llm_util import get_llm_client
 from utils.milvus_util import get_milvus_client
-from utils.bge_me_embedding_util import get_bge_m3_embedding_model
+from utils.bge_m3_embedding_util import get_bge_m3_embedding_model
 
 
 

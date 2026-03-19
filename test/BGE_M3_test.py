@@ -1,4 +1,4 @@
-from utils.bge_me_embedding_util import get_bge_m3_embedding_model
+from utils.bge_m3_embedding_util import get_bge_m3_embedding_model
 
 
 embedding_model = get_bge_m3_embedding_model()

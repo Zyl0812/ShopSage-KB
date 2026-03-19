@@ -11,7 +11,7 @@ from processor.query_process.config import get_config
 from processor.query_process.exceptions import StateFieldError
 from processor.query_process.state import QueryGraphState
 from prompts.query_prompts import ENTITY_EXTRACT_SYSTEM_PROMPT
-from utils.bge_me_embedding_util import (
+from utils.bge_m3_embedding_util import (
     generate_hybrid_embeddings,
     get_bge_m3_embedding_model,
 )
@@ -820,7 +820,7 @@ class _ChunkBackFiller:
         }
 
         # 5. 根据真实顺序的chunk_id查询对应的chunk
-        return [c for c in (chunk_id_map.get(str(chunk_id)) for chunk_id in chunk_ids) if c is not None]
+        return [{'entity':chunk_id_map.get(str(chunk_id))} for chunk_id in chunk_ids]
 
     def _collect_chunk_ids(
         self, chunk_nodes_sorted: List[Dict[str, Any]]

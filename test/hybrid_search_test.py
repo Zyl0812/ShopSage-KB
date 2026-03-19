@@ -15,7 +15,7 @@ from utils.milvus_util import (
     create_hybrid_search_requests,
     execute_hybrid_search_query,
 )
-from utils.bge_me_embedding_util import (
+from utils.bge_m3_embedding_util import (
     get_bge_m3_embedding_model,
     generate_hybrid_embeddings,
 )

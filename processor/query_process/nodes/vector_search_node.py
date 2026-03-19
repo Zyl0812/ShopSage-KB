@@ -5,7 +5,7 @@ from typing import List, Tuple
 
 from processor.query_process.exceptions import StateFieldError
 from utils.milvus_util import get_milvus_client, create_hybrid_search_requests, execute_hybrid_search_query
-from utils.bge_me_embedding_util import get_bge_m3_embedding_model, generate_hybrid_embeddings
+from utils.bge_m3_embedding_util import get_bge_m3_embedding_model, generate_hybrid_embeddings
 from processor.query_process.state import QueryGraphState
 from processor.query_process.base import BaseNode
 
