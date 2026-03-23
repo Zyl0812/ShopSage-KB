@@ -13,6 +13,7 @@ from processor.query_process.state import QueryGraphState
 from processor.query_process.base import BaseNode
 from processor.query_process.config import get_config
 from prompts.query_prompts import ITEM_NAME_EXTRACT_TEMPLATE
+from utils.mongo_history_util import get_recent_messages, update_message_item_names
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -186,11 +187,10 @@ class ItemNameExtractor:
         1. 单级询问（一个商品） -> [item_name, fake_name...]
         2. 多级询问 -> [item_name_1, item_name_2, fake_name...]
     '''
-    def extract_item_name(self, original_query: str) -> Dict[str, List[Any]|Any]:
+    def extract_item_name(self, original_query: str, history_text: str) -> Dict[str, List[Any]|Any]:
         
         
         result: Dict[str, Any] = {'item_names': [], 'rewritten_query': ''}
-        history = ''
         
         # 1. 获取LLM客户端（返回JSON格式）
         llm_client = get_llm_client(response_format=True)
@@ -198,7 +198,7 @@ class ItemNameExtractor:
             return result
         
         # 2. 定义提示词
-        human_prompt = ITEM_NAME_EXTRACT_TEMPLATE.format(history_text=history if history else '暂无上下文', query=original_query)
+        human_prompt = ITEM_NAME_EXTRACT_TEMPLATE.format(history_text=history_text if history_text else '暂无上下文', query=original_query)
         system_prompt = '你是一个专业的客服助手，擅长理解用户意图和提取关键信息。'
         
         # 3. 调用LLM
@@ -266,20 +266,42 @@ class ItemNameConfirmNode(BaseNode):
     def process(self, state: QueryGraphState) -> QueryGraphState:
         # 1. 获取用户的原始问题
         original_query = state.get('original_query')
+        session_id = state.get('session_id')
         
-        # 2. 调用LLM提取商品名（基于原始问题提取item_name）
-        llm_result = self._item_name_extractor.extract_item_name(original_query)
+        # 2. 构建历史对话
+        chat_history = get_recent_messages(session_id, limit=10)
+        history_text = ''
+        for msg in chat_history:
+            role = msg.get('role')
+            text = msg.get('text')
+            history_text += f"{role}: {text}\n"
+        
+        
+        # 3. 调用LLM提取商品名（基于原始问题提取item_name）
+        llm_result = self._item_name_extractor.extract_item_name(original_query, history_text)
         item_names = llm_result.get('item_names')
         rewritten_query = llm_result.get('rewritten_query')
         
         if item_names:
-            # 3. 查询向量数据库以及过滤（评分对齐，分数差异过滤）
+            # 4. 查询向量数据库以及过滤（评分对齐，分数差异过滤）
             confirmed, options = self._item_name_aligner.match_align_filter(item_names)
         else:
             confirmed, options = [], []
         
-        # 4. 决定state的key（继续or结束）
+        # 5. 决定state的key（继续or结束）
         self._decide(state, item_names, confirmed, options, rewritten_query)
+        
+        if confirmed:
+            ids_to_update = [
+                str(msg['_id']) for msg in chat_history if not msg.get('item_names')
+            ]
+            if ids_to_update:
+                try:
+                    update_message_item_names(ids_to_update, confirmed)
+                except Exception as e:
+                    self.logger.error(f"更新聊天消息失败: {e}")
+        
+        state['history'] = chat_history
         
         return state
     

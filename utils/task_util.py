@@ -1,12 +1,12 @@
-from collections import defaultdict
 from typing import Dict, List
+from collections import defaultdict
 
 # 只要访问不存在的 key，自动帮你初始化为 []
 _tasks_running_list: Dict[str, List[str]] = defaultdict(list)
 _tasks_done_list: Dict[str, List[str]] = defaultdict(list)
 
 # 只要访问不存在的 key，自动帮你初始化为 {}
-# _tasks_result: Dict[str, Dict[str, str]] = defaultdict(dict)
+_tasks_result: Dict[str, Dict[str, str]] = defaultdict(dict)
 
 _tasks_status: Dict[str, str] = {}
 
@@ -25,6 +25,17 @@ _NODE_NAME_TO_CN: Dict[str, str] = {
     "import_milvus_node": "导入向量数据库",
     "knowledge_graph_node": "导入知识图谱",
     "__end__": "处理完成",
+
+    # --- Query 流程节点（kb/query_process/main_graph.py）---
+    "item_name_confirm_node": "确认问题产品",
+    "answer_output_node": "生成答案",
+    "rerank_node": "重排序",
+    "rrf_node": "倒排融合",
+    "mcp_search_node": "网络搜索",
+    "vector_search_node": "切片搜索",
+    "hyde_search_node": "切片搜索(假设性文档)",
+    "kg_search_node": "查询知识图谱"
+
 }
 
 
@@ -43,7 +54,6 @@ def add_running_task(task_id: str, node_name: str) -> None:
 
 
 def add_done_task(task_id: str, node_name: str) -> None:
-
     # 1. 如果该节点还在运行列表中，则将其移出（表示该节点已结束运行）
     if node_name in _tasks_running_list[task_id]:
         _tasks_running_list[task_id].remove(node_name)
@@ -77,8 +87,22 @@ def get_task_status(task_id: str) -> str:
 
 
 def update_task_status(task_id: str, status_name: str) -> None:
-    # 1. 更新指定任务的总体运行状态（如 pending, processing 等）
+    # 1. 更新指定任务的总体运行状态（如 processing 等）
     _tasks_status[task_id] = status_name
+
+
+def set_task_result(task_id: str, key: str, value: str) -> None:
+    """
+    存储任务结果字段（如 answer / error）。
+    """
+    _tasks_result[task_id][key] = value
+
+
+def get_task_result(task_id: str, key: str, default: str = "") -> str:
+    """
+    获取任务结果字段（如 answer / error）。
+    """
+    return _tasks_result.get(task_id, {}).get(key, default)
 
 
 def clear_task(task_id: str):
@@ -89,4 +113,4 @@ def clear_task(task_id: str):
     # 3. 安全移除该任务的总体状态记录
     _tasks_status.pop(task_id, None)
     # 4. 安全移除该任务的结果记录
-    # _tasks_result.pop(task_id, None)
+    _tasks_result.pop(task_id, None)

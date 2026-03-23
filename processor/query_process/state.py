@@ -3,8 +3,14 @@
 定义完整的查询状态结构和辅助函数。
 """
 
-from typing import TypedDict, List
+from typing import TypedDict, List, Annotated
+from operator import add
 import copy
+
+
+def _last(left, right):
+    """取最新值，用于并行分支汇合时 str/bool 等标量字段的 reducer。"""
+    return right
 
 
 class QueryGraphState(TypedDict):
@@ -13,28 +19,30 @@ class QueryGraphState(TypedDict):
     Attributes:
     各个属性的结构
     """
-    session_id: str # 会话ID
-    message_id: str # 消息ID
-    original_query: str # 原始查询
-    embedding_chunks: list # 已向量化的切片
-    hyde_embedding_chunks: list # 已向量化的假设性问题切片
-    rrf_chunks: list # rrf排序后的切片
-    web_search_docs: list # 搜索结果
-    reranked_docs: list  # 排序后的文档
-    prompt: str  #提示词
-    answer: str #答案
-    item_names: List[str] # 商品名称
-    rewritten_query: str  #重写答案
-    history: list   # 历史对话
-    is_stream: bool # 是否流式输出
-    kg_chunks: list # 知识图谱切片
-    kg_triples: list # 知识图谱关系
+    session_id: Annotated[str, _last] # 会话ID
+    task_id: Annotated[str, _last] # 任务ID
+    message_id: Annotated[str, _last] # 消息ID
+    original_query: Annotated[str, _last] # 原始查询
+    embedding_chunks: Annotated[list, _last] # 已向量化的切片
+    hyde_embedding_chunks: Annotated[list, _last] # 已向量化的假设性问题切片
+    rrf_chunks: Annotated[list, _last] # rrf排序后的切片
+    web_search_docs: Annotated[list, _last] # 搜索结果
+    reranked_docs: Annotated[list, _last]  # 排序后的文档
+    prompt: Annotated[str, _last]  #提示词
+    answer: Annotated[str, _last] #答案
+    item_names: Annotated[List[str], _last] # 商品名称
+    rewritten_query: Annotated[str, _last]  #重写答案
+    history: Annotated[list, _last]   # 历史对话
+    is_stream: Annotated[bool, _last] # 是否流式输出
+    kg_chunks: Annotated[list, _last] # 知识图谱切片
+    kg_triples: Annotated[list, _last] # 知识图谱关系
 
 
 # ==================== 默认状态 ====================
 
 DEFAULT_STATE: QueryGraphState = {
     "session_id": "",               # 会话ID
+    "task_id": "",                  # 任务ID
     "message_id": "",               # 消息ID
     "original_query": "",           # 原始查询
     "embedding_chunks": [],         # 已向量化的切片

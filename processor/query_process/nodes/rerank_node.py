@@ -3,7 +3,7 @@ import logging
 from typing import List, Dict, Any
 
 from processor.query_process.state import QueryGraphState
-from processor.query_process.base import BaseNode
+from processor.query_process.base import BaseNode, setup_logging
 from utils.bge_reranker_util import get_reranker_model
 
 
@@ -107,7 +107,7 @@ class RerankNode(BaseNode):
             rerank_score = reranker_model.compute_score(pairs)
         except Exception as e:
             self.logger.error(f'重排序计算失败: {e}')
-            return []
+            return [{**doc, 'score': None} for doc in merged_multi_docs]
         
         # 5. 排序
         sorted_docs = [{**doc, 'score': score} for score, doc in sorted(zip(rerank_score, merged_multi_docs), key=lambda x: x[0], reverse=True)]
@@ -156,4 +156,49 @@ class RerankNode(BaseNode):
                 break
     
         return reranked_docs[:cutoff_pos]
-        
+
+
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    setup_logging()
+
+    print("=" * 60)
+    print("开始测试: 重排序节点 (RerankNode)")
+    print("=" * 60)
+
+    mock_state = {
+        "rewritten_query": "怎么测这块主板的短路问题？",
+        "rrf_chunks": [
+            {"chunk_id": "local_1", "title": "主板维修手册",
+             "content": "主板短路通常表现为通电后风扇转一下就停，可以使用万用表的蜂鸣档测量。"},
+            {"chunk_id": "local_2", "title": "闲聊",
+             "content": "今天中午去吃猪脚饭吧，这块主板外观很漂亮。"},
+        ],
+        "web_search_docs": [
+            {"url": "https://example.com/repair", "title": "短路查修指南",
+             "snippet": "主板通电前先打各主供电电感的对地阻值，阻值偏低就是短路。"},
+            {"url": "https://example.com/news", "title": "科技新闻",
+             "snippet": "苹果发布新款手机，A系列芯片性能提升20%。"},
+        ],
+    }
+
+    print("【输入状态】:")
+    print(f"  查询: {mock_state['rewritten_query']}")
+    print(f"  本地文档: {len(mock_state['rrf_chunks'])} 篇")
+    print(f"  网络文档: {len(mock_state['web_search_docs'])} 篇")
+    print("-" * 60)
+
+    node = RerankNode()
+    result = node.process(mock_state)
+
+    print("\n【重排序结果】:")
+    for i, doc in enumerate(result["reranked_docs"], 1):
+        print(doc)
+        score = doc.get('score')
+        score_str = f"{score:.4f}" if score is not None else "N/A"
+        print(f"[{i}] score={score_str} | {doc['source']:5} | {doc['content'][:50]}...")
+
+    print("-" * 60)
+    print("测试完成")

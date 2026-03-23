@@ -210,7 +210,7 @@ class ItemNameRecognitionNode(BaseNode):
             field_name="dense_vector",
             index_name="dense_vector_index",
             index_type="AUTOINDEX",
-            metric_type="IP"
+            metric_type="COSINE"
         )
         # 2.2 创建稀疏向量字段索引
         index_params.add_index(
