@@ -1,27 +1,46 @@
-# 掌柜智库 - 知识库问答系统
+# ShopSage-KB - 知识库问答系统
 
-基于 RAG + 知识图谱的商品知识库智能问答系统，支持 PDF 文档导入、四路混合检索、重排序及流式答案生成。
+基于 **RAG + 知识图谱**的商品文档知识库智能问答系统，专为家电/仪器仪表等垂直行业的商品知识检索场景设计。
+
+系统分为**文档导入**和**智能问答**两条主链路：
+
+- **导入链路**：上传 PDF/MD 格式的商品手册，经 MinerU 解析、文档切分、BGE-M3 双路向量化后，分别写入 Milvus（向量检索）和 Neo4j（知识图谱），实现结构化与非结构化知识的统一入库。
+- **问答链路**：用户提问后，系统先通过 LLM 结合多轮历史对话提取并确认商品名（防止指代歧义），再并行发起四路检索——**稠密向量检索、HyDE 假设性文档检索、知识图谱检索、Tavily 网络实时搜索**，经 RRF 融合 + BGE-Reranker 重排序后，将最相关的上下文连同图谱关系和对话历史一起送入 LLM 生成答案，全程支持 **SSE 流式推送**，前端可实时感知节点执行进度和 token 输出。
 
 ## 系统架构
 
-```
-文档导入流程                        查询流程
-──────────────                    ──────────────────────────────────
-PDF 上传                           用户提问
-  ↓                                  ↓
-PDF → Markdown (MinerU)          商品名确认 (LLM + Milvus 向量匹配)
-  ↓                                  ↓
-图片处理 & 切分                  ┌──────────────────────────┐
-  ↓                              │     四路并行检索           │
-向量生成 (BGE-M3)                │  向量检索 / HyDE 检索     │
-  ↓                              │  知识图谱检索 / 网络搜索   │
-导入 Milvus + Neo4j              └──────────────────────────┘
-                                          ↓
-                                     RRF 融合排序
-                                          ↓
-                                     BGE 重排序
-                                          ↓
-                                    LLM 生成答案 (流式/非流式)
+> 完整 draw.io 源文件见 [docs/architecture.drawio](docs/architecture.drawio)
+
+```mermaid
+flowchart TB
+    subgraph import["📥 文档导入流程"]
+        direction TB
+        A([PDF / MD 上传]) --> B[PDF→Markdown\nMinerU 解析]
+        B --> C[图片处理 & 文档切分]
+        C --> D[向量生成\nBGE-M3 稠密+稀疏]
+        D --> MV[(Milvus\n向量数据库)]
+        D --> NJ[(Neo4j\n知识图谱)]
+    end
+
+    subgraph query["💬 查询流程"]
+        direction TB
+        G([用户提问]) --> H[商品名确认\nLLM 提取 + Milvus 向量匹配对齐]
+        MG[(MongoDB\n历史对话)] -. 多轮上下文 .-> H
+
+        H --> parallel
+
+        subgraph parallel["四路并行检索"]
+            direction LR
+            P1[向量检索\nBGE-M3] 
+            P2[HyDE 检索\n假设性文档扩增]
+            P3[知识图谱检索\nNeo4j 实体关系]
+            P4[网络搜索\nTavily MCP]
+        end
+
+        parallel --> R[RRF 倒数排名融合]
+        R --> K[BGE-Reranker 重排序\n分差截断过滤低相关文档]
+        K --> ANS([LLM 生成答案\nSSE 流式推送 / 非流式返回])
+    end
 ```
 
 ## 技术栈

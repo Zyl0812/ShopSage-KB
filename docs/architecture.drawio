@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- ===================== 导入流程容器 ===================== -->
+    <mxCell id="import_bg" value="📥  文档导入流程" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="40" width="240" height="560" as="geometry" />
+    </mxCell>
+
+    <mxCell id="n1" value="PDF / MD 上传" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="import_bg">
+      <mxGeometry x="20" y="50" width="200" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n1" target="n2" parent="import_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="n2" value="PDF → Markdown&#xa;MinerU 解析" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="import_bg">
+      <mxGeometry x="20" y="150" width="200" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n2" target="n3" parent="import_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="n3" value="图片处理 &amp; 文档切分" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="import_bg">
+      <mxGeometry x="20" y="250" width="200" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n3" target="n4" parent="import_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="n4" value="向量生成&#xa;BGE-M3（稠密 + 稀疏）" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="import_bg">
+      <mxGeometry x="20" y="350" width="200" height="50" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e4a" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n4" target="n5a" parent="import_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e4b" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n4" target="n5b" parent="import_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="n5a" value="Milvus&#xa;向量数据库" style="shape=cylinder3;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="import_bg">
+      <mxGeometry x="10" y="450" width="90" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="n5b" value="Neo4j&#xa;知识图谱" style="shape=cylinder3;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="import_bg">
+      <mxGeometry x="120" y="450" width="90" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- ===================== 查询流程容器 ===================== -->
+    <mxCell id="query_bg" value="💬  查询流程" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+      <mxGeometry x="360" y="40" width="660" height="760" as="geometry" />
+    </mxCell>
+
+    <mxCell id="q1" value="用户提问" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="query_bg">
+      <mxGeometry x="230" y="50" width="200" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="eq1" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q1" target="q2" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="q2" value="商品名确认&#xa;LLM 提取 + Milvus 向量匹配对齐" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="query_bg">
+      <mxGeometry x="180" y="150" width="300" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="eq2" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q2" target="q3a" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="eq2b" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q2" target="q3b" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="eq2c" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q2" target="q3c" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="eq2d" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q2" target="q3d" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- 四路并行检索 -->
+    <mxCell id="parallel_bg" value="四路并行检索" style="swimlane;startSize=25;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=11;rounded=1;" vertex="1" parent="query_bg">
+      <mxGeometry x="20" y="250" width="620" height="130" as="geometry" />
+    </mxCell>
+
+    <mxCell id="q3a" value="向量检索&#xa;BGE-M3 稠密+稀疏" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="parallel_bg">
+      <mxGeometry x="10" y="40" width="130" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="q3b" value="HyDE 检索&#xa;假设性文档扩增" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="parallel_bg">
+      <mxGeometry x="160" y="40" width="130" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="q3c" value="知识图谱检索&#xa;Neo4j 实体关系" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="parallel_bg">
+      <mxGeometry x="310" y="40" width="130" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="q3d" value="网络搜索&#xa;Tavily MCP" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="parallel_bg">
+      <mxGeometry x="460" y="40" width="130" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- 并行结果汇合到 RRF -->
+    <mxCell id="eq3a" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q3a" target="q4" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="eq3b" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q3b" target="q4" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="eq3c" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q3c" target="q4" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="eq3d" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q3d" target="q4" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="q4" value="RRF 倒数排名融合" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="query_bg">
+      <mxGeometry x="205" y="430" width="250" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="eq4" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q4" target="q5" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="q5" value="BGE-Reranker 重排序&#xa;分差截断过滤低相关文档" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="query_bg">
+      <mxGeometry x="180" y="530" width="300" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="eq5" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="q5" target="q6" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="q6" value="LLM 生成答案&#xa;SSE 流式推送 / 非流式返回" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="query_bg">
+      <mxGeometry x="180" y="640" width="300" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- MongoDB 历史对话注释 -->
+    <mxCell id="mongo" value="MongoDB&#xa;历史对话" style="shape=cylinder3;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="query_bg">
+      <mxGeometry x="530" y="130" width="90" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="emongo" style="edgeStyle=orthogonalEdgeStyle;dashed=1;endArrow=open;" edge="1" source="mongo" target="q2" parent="query_bg">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+  </root>
+</mxGraphModel>
