@@ -8,11 +8,20 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Environment variables (contains secrets)
 .env
+
+# IDE / tool local config
+.claude/
+.mypy_cache/
+.idea/
+.vscode/
 
 # Temporary directories
 processor/import_process/import_temp_dir/
 processor/import_process/output_temp_dir/
-
-test/
 temp_data/
+
+# Test files
+test/

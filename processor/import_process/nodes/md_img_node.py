@@ -488,7 +488,7 @@ if __name__ == "__main__":
 
     state = ImportGraphState(
         {
-            "md_path": r"D:\atguigu\shopkeer_brain\knowledge\processor\import_process\output_temp_dir\万用表RS-12的使用\hybrid_auto\万用表RS-12的使用.md"
+            "md_path": r"D:\atguigu\shopkeer_brain\knowledge\processor\import_process\output_temp_dir\华为擎云B730 用户指南-(PUCZ,Windows11_03,zh-cn)\hybrid_auto\华为擎云B730 用户指南-(PUCZ,Windows11_03,zh-cn).md"
         }
     )
 

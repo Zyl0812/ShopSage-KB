@@ -104,7 +104,7 @@ class AnswerOutputNode(BaseNode):
         context_str, char_budget = self._format_reranked_docs(state.get('reranked_docs') or [], char_budget)
         
         # 3. 格式化历史对话
-        history_str, char_budget = self._format_chat_history(state.get('chat_history') or [], char_budget)
+        history_str, char_budget = self._format_chat_history(state.get('history') or [], char_budget)
         
         # 4. 格式化图谱关系
         graph_str, char_budget = self._format_kg_triples(state.get('kg_triples') or [], char_budget)
